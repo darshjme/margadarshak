@@ -4,20 +4,15 @@
 
 # agent-router
 
-**Request routing and pattern matching for LLM agents. Zero external dependencies.**
+**Production request routing for multi-agent systems**
 
-[![PyPI](https://img.shields.io/pypi/v/agent-router?color=blue)](https://pypi.org/project/agent-router/)
-[![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://python.org)
-[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Zero deps](https://img.shields.io/badge/dependencies-zero-brightgreen)](pyproject.toml)
+[![PyPI version](https://img.shields.io/pypi/v/agent-router?color=blue&style=flat-square)](https://pypi.org/project/agent-router/) [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue?style=flat-square)](https://python.org) [![License: MIT](https://img.shields.io/badge/License-MIT-green?style=flat-square)](LICENSE) [![Tests](https://img.shields.io/badge/tests-passing-brightgreen?style=flat-square)](#)
 
 ---
 
 ## The Problem
 
-Production LLM agents fail silently. Without request routing and pattern matching, you get undefined behaviour at scale — race conditions, lost state, cascading failures, and no way to debug what went wrong.
-
-`agent-router` gives you a production-ready request routing and pattern matching primitive with a clean API, tested edge cases, and zero configuration.
+Without intent routing, every incoming message hits a single monolithic handler that pattern-matches with fragile if-chains. New intents break existing logic; high-priority tasks queue behind low-priority ones. Routing is the first thing that fails at scale.
 
 ## Installation
 
@@ -25,88 +20,98 @@ Production LLM agents fail silently. Without request routing and pattern matchin
 pip install agent-router
 ```
 
-Or from source:
-
-```bash
-git clone https://github.com/darshjme/agent-router.git
-cd agent-router
-pip install -e .
-```
-
 ## Quick Start
 
 ```python
-from agent_router import *  # see API reference below
+from agent_router import NoRouteError, Route, RegexRoute
 
-# See examples/ directory for complete working examples
+# Initialise
+instance = NoRouteError(name="my_agent")
+
+# Use
+# see API reference below
+print(result)
 ```
 
 ## API Reference
 
-The main classes and functions are defined in `agent_router/__init__.py`.
+### `NoRouteError`
 
-Key exports: `RegexRoute · KeywordRoute · fallback handlers · dispatch`
+```python
+class NoRouteError(Exception):
+    """Raised when no route matches a request and no fallback is set."""
+    def __init__(self, request: str) -> None:
+```
 
-All classes follow a consistent interface:
-- Instantiate with sensible defaults
-- Compose with other arsenal libraries
-- Zero external dependencies required
+### `Route`
 
-See the source code and `tests/` directory for verified usage examples.
+```python
+class Route:
+    """A routing rule that matches a request string against a pattern."""
+    def __init__(
+    def pattern(self) -> str:
+    def matches(self, request: str) -> bool:
+        """Return True if the pattern appears as a substring of the request."""
+    def __call__(self, request: str) -> Any:
+```
+
+### `RegexRoute`
+
+```python
+class RegexRoute(Route):
+    """A route that matches using a regular expression.
+    def __init__(
+    def matches(self, request: str) -> bool:
+    def __call__(self, request: str) -> Any:
+```
+
+### `KeywordRoute`
+
+```python
+class KeywordRoute(Route):
+    """A route that matches if ANY of the given keywords is present in the request."""
+    def __init__(
+```
+
 
 ## How It Works
 
+### Flow
+
 ```mermaid
 flowchart LR
-    A[Agent Task] --> B[agent-router]
-    B --> C{Decision}
-    C -->|success| D[✅ Result]
-    C -->|failure| E[⚠️ Handle]
-    E --> B
-
-    style B fill:#161b22,stroke:#1f6feb,stroke-width:2,color:#1f6feb
-    style D fill:#1a3320,stroke:#238636,color:#3fb950
-    style E fill:#3d1a1a,stroke:#f85149,color:#f85149
+    A[User Code] -->|create| B[NoRouteError]
+    B -->|configure| C[Route]
+    C -->|execute| D{Success?}
+    D -->|yes| E[Return Result]
+    D -->|no| F[Error Handler]
+    F --> G[Fallback / Retry]
+    G --> C
 ```
+
+### Sequence
 
 ```mermaid
 sequenceDiagram
-    participant Agent
-    participant AgentRouter as agent-router
-    participant Output
+    participant App
+    participant NoRouteError
+    participant Route
 
-    Agent->>AgentRouter: initialize()
-    AgentRouter-->>Agent: ready
-
-    loop Agent Run
-        Agent->>AgentRouter: process(input)
-        AgentRouter-->>Agent: result
-    end
-
-    Agent->>Output: deliver(result)
+    App->>+NoRouteError: initialise()
+    NoRouteError->>+Route: configure()
+    Route-->>-NoRouteError: ready
+    App->>+NoRouteError: run(context)
+    NoRouteError->>+Route: execute(context)
+    Route-->>-NoRouteError: result
+    NoRouteError-->>-App: WorkflowResult
 ```
 
 ## Philosophy
 
-*Śreyān sva-dharmo viguṇaḥ para-dharmāt su-anuṣṭhitāt* — every request has its rightful handler. agent-router finds it.
+> The *Chakravyuha* had seven rings — routing is knowing which ring each warrior belongs in.
 
 ---
 
-## Part of the Arsenal
-
-`agent-router` is one of six production libraries for LLM agents:
-
-| Library | Purpose |
-|---------|---------|
-| [herald](https://github.com/darshjme/herald) | Semantic task routing |
-| [engram](https://github.com/darshjme/engram) | Agent memory |
-| [sentinel](https://github.com/darshjme/sentinel) | ReAct loop guards |
-| [verdict](https://github.com/darshjme/verdict) | Agent evaluation |
-| [agent-guardrails](https://github.com/darshjme/agent-guardrails) | Output validation |
-| [agent-observability](https://github.com/darshjme/agent-observability) | Tracing & metrics |
-
-→ [arsenal](https://github.com/darshjme/arsenal) — the complete stack
-
----
+*Part of the [arsenal](https://github.com/darshjme/arsenal) — production stack for LLM agents.*
 
 *Built by [Darshankumar Joshi](https://github.com/darshjme), Gujarat, India.*
