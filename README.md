@@ -1,13 +1,23 @@
+<div align="center">
+<img src="assets/hero.svg" width="100%"/>
+</div>
+
 # agent-router
 
-> Production request routing for multi-agent systems — zero dependencies.
+**Request routing and pattern matching for LLM agents. Zero external dependencies.**
 
-[![Python](https://img.shields.io/badge/python-3.10%2B-blue)](https://python.org)
+[![PyPI](https://img.shields.io/pypi/v/agent-router?color=blue)](https://pypi.org/project/agent-router/)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://python.org)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-
-Route incoming requests to the right agent handler using string patterns, regular expressions, or keyword matching — with priority ordering, middleware-friendly dispatch, and fallback support.
+[![Zero deps](https://img.shields.io/badge/dependencies-zero-brightgreen)](pyproject.toml)
 
 ---
+
+## The Problem
+
+Production LLM agents fail silently. Without request routing and pattern matching, you get undefined behaviour at scale — race conditions, lost state, cascading failures, and no way to debug what went wrong.
+
+`agent-router` gives you a production-ready request routing and pattern matching primitive with a clean API, tested edge cases, and zero configuration.
 
 ## Installation
 
@@ -18,129 +28,85 @@ pip install agent-router
 Or from source:
 
 ```bash
-git clone https://github.com/darshjme-codes/agent-router
+git clone https://github.com/darshjme/agent-router.git
 cd agent-router
 pip install -e .
 ```
 
----
-
-## Quick Start — Multi-Agent Dispatch
+## Quick Start
 
 ```python
-from agent_router import Router, Route, RegexRoute, KeywordRoute, NoRouteError
+from agent_router import *  # see API reference below
 
-router = Router()
-
-# --- CalendarAgent ---
-@router.route("schedule", priority=5)
-def calendar_agent(request):
-    return f"[CalendarAgent] Handling: {request}"
-
-# --- CodingAgent via regex (extracts language) ---
-import re
-def coding_agent(request, language=None):
-    lang = language or "Python"
-    return f"[CodingAgent] Writing {lang} code for: {request}"
-
-router.add_route(
-    RegexRoute(r"write (?P<language>\w+) code", coding_agent, priority=8)
-)
-
-# --- SearchAgent via keywords ---
-router.add_route(
-    KeywordRoute(
-        keywords=["search", "find", "look up", "google"],
-        handler=lambda req: f"[SearchAgent] Searching: {req}",
-        priority=3,
-    )
-)
-
-# --- Fallback: General assistant ---
-router.set_fallback(lambda req: f"[GeneralAgent] I'll handle this: {req}")
-
-# --- Dispatch ---
-print(router.dispatch("schedule a meeting with Alice"))
-# [CalendarAgent] Handling: schedule a meeting with Alice
-
-print(router.dispatch("write Python code for a REST API"))
-# [CodingAgent] Writing Python code for: write Python code for a REST API
-
-print(router.dispatch("search for the latest AI news"))
-# [SearchAgent] Searching: search for the latest AI news
-
-print(router.dispatch("what's the weather today?"))
-# [GeneralAgent] I'll handle this: what's the weather today?
-
-# Dispatch to ALL matching handlers
-results = router.dispatch_all("schedule and search")
-for r in results:
-    print(r)
+# See examples/ directory for complete working examples
 ```
 
----
+## API Reference
 
-## Core API
+The main classes and functions are defined in `agent_router/__init__.py`.
 
-### `Route(pattern, handler, priority=0, method="any")`
-Matches if `pattern` is a substring of the request.
+Key exports: `RegexRoute · KeywordRoute · fallback handlers · dispatch`
 
-```python
-r = Route("schedule", calendar_agent, priority=5)
-r.matches("schedule a meeting")  # True
+All classes follow a consistent interface:
+- Instantiate with sensible defaults
+- Compose with other arsenal libraries
+- Zero external dependencies required
+
+See the source code and `tests/` directory for verified usage examples.
+
+## How It Works
+
+```mermaid
+flowchart LR
+    A[Agent Task] --> B[agent-router]
+    B --> C{Decision}
+    C -->|success| D[✅ Result]
+    C -->|failure| E[⚠️ Handle]
+    E --> B
+
+    style B fill:#161b22,stroke:#1f6feb,stroke-width:2,color:#1f6feb
+    style D fill:#1a3320,stroke:#238636,color:#3fb950
+    style E fill:#3d1a1a,stroke:#f85149,color:#f85149
 ```
 
-### `RegexRoute(pattern, handler, priority=0, method="any")`
-Matches via regex. Named capture groups are passed as `**kwargs` to the handler.
+```mermaid
+sequenceDiagram
+    participant Agent
+    participant AgentRouter as agent-router
+    participant Output
 
-```python
-r = RegexRoute(r"book (?P<room>\w+) at (?P<time>\d+)", handler)
-# handler(request, room="...", time="...")
+    Agent->>AgentRouter: initialize()
+    AgentRouter-->>Agent: ready
+
+    loop Agent Run
+        Agent->>AgentRouter: process(input)
+        AgentRouter-->>Agent: result
+    end
+
+    Agent->>Output: deliver(result)
 ```
 
-### `KeywordRoute(keywords, handler, case_sensitive=False, priority=0, method="any")`
-Matches if **any** keyword appears in the request (case-insensitive by default).
+## Philosophy
 
-```python
-r = KeywordRoute(["deploy", "ship", "release"], devops_agent)
-r.matches("ship the product")  # True
-```
-
-### `Router`
-
-| Method | Description |
-|--------|-------------|
-| `add_route(route)` | Register a `Route` instance. Returns `self` (fluent). |
-| `route(pattern, priority=0)` | Decorator factory — registers the decorated function. |
-| `dispatch(request)` | Call the **highest-priority** matching handler. Raises `NoRouteError` if none found and no fallback. |
-| `dispatch_all(request)` | Call **all** matching handlers (sorted by priority). Returns list of results. |
-| `set_fallback(handler)` | Register a catch-all handler. |
-
-### `NoRouteError`
-Raised by `dispatch()` when no route matches and no fallback is configured.
-
-```python
-try:
-    router.dispatch("unknown request")
-except NoRouteError as e:
-    print(e.request)  # "unknown request"
-```
+*Śreyān sva-dharmo viguṇaḥ para-dharmāt su-anuṣṭhitāt* — every request has its rightful handler. agent-router finds it.
 
 ---
 
-## Priority System
+## Part of the Arsenal
 
-Higher priority wins. Use it to resolve conflicts between overlapping routes.
+`agent-router` is one of six production libraries for LLM agents:
 
-```python
-router.add_route(Route("code", generic_handler, priority=0))
-router.add_route(Route("code", specialist_handler, priority=10))
+| Library | Purpose |
+|---------|---------|
+| [herald](https://github.com/darshjme/herald) | Semantic task routing |
+| [engram](https://github.com/darshjme/engram) | Agent memory |
+| [sentinel](https://github.com/darshjme/sentinel) | ReAct loop guards |
+| [verdict](https://github.com/darshjme/verdict) | Agent evaluation |
+| [agent-guardrails](https://github.com/darshjme/agent-guardrails) | Output validation |
+| [agent-observability](https://github.com/darshjme/agent-observability) | Tracing & metrics |
 
-router.dispatch("write code")  # → specialist_handler wins
-```
+→ [arsenal](https://github.com/darshjme/arsenal) — the complete stack
 
 ---
 
-## License
-
-MIT © Darshankumar Joshi
+*Built by [Darshankumar Joshi](https://github.com/darshjme), Gujarat, India.*
