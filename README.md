@@ -1,0 +1,146 @@
+# agent-router
+
+> Production request routing for multi-agent systems — zero dependencies.
+
+[![Python](https://img.shields.io/badge/python-3.10%2B-blue)](https://python.org)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+
+Route incoming requests to the right agent handler using string patterns, regular expressions, or keyword matching — with priority ordering, middleware-friendly dispatch, and fallback support.
+
+---
+
+## Installation
+
+```bash
+pip install agent-router
+```
+
+Or from source:
+
+```bash
+git clone https://github.com/darshjme-codes/agent-router
+cd agent-router
+pip install -e .
+```
+
+---
+
+## Quick Start — Multi-Agent Dispatch
+
+```python
+from agent_router import Router, Route, RegexRoute, KeywordRoute, NoRouteError
+
+router = Router()
+
+# --- CalendarAgent ---
+@router.route("schedule", priority=5)
+def calendar_agent(request):
+    return f"[CalendarAgent] Handling: {request}"
+
+# --- CodingAgent via regex (extracts language) ---
+import re
+def coding_agent(request, language=None):
+    lang = language or "Python"
+    return f"[CodingAgent] Writing {lang} code for: {request}"
+
+router.add_route(
+    RegexRoute(r"write (?P<language>\w+) code", coding_agent, priority=8)
+)
+
+# --- SearchAgent via keywords ---
+router.add_route(
+    KeywordRoute(
+        keywords=["search", "find", "look up", "google"],
+        handler=lambda req: f"[SearchAgent] Searching: {req}",
+        priority=3,
+    )
+)
+
+# --- Fallback: General assistant ---
+router.set_fallback(lambda req: f"[GeneralAgent] I'll handle this: {req}")
+
+# --- Dispatch ---
+print(router.dispatch("schedule a meeting with Alice"))
+# [CalendarAgent] Handling: schedule a meeting with Alice
+
+print(router.dispatch("write Python code for a REST API"))
+# [CodingAgent] Writing Python code for: write Python code for a REST API
+
+print(router.dispatch("search for the latest AI news"))
+# [SearchAgent] Searching: search for the latest AI news
+
+print(router.dispatch("what's the weather today?"))
+# [GeneralAgent] I'll handle this: what's the weather today?
+
+# Dispatch to ALL matching handlers
+results = router.dispatch_all("schedule and search")
+for r in results:
+    print(r)
+```
+
+---
+
+## Core API
+
+### `Route(pattern, handler, priority=0, method="any")`
+Matches if `pattern` is a substring of the request.
+
+```python
+r = Route("schedule", calendar_agent, priority=5)
+r.matches("schedule a meeting")  # True
+```
+
+### `RegexRoute(pattern, handler, priority=0, method="any")`
+Matches via regex. Named capture groups are passed as `**kwargs` to the handler.
+
+```python
+r = RegexRoute(r"book (?P<room>\w+) at (?P<time>\d+)", handler)
+# handler(request, room="...", time="...")
+```
+
+### `KeywordRoute(keywords, handler, case_sensitive=False, priority=0, method="any")`
+Matches if **any** keyword appears in the request (case-insensitive by default).
+
+```python
+r = KeywordRoute(["deploy", "ship", "release"], devops_agent)
+r.matches("ship the product")  # True
+```
+
+### `Router`
+
+| Method | Description |
+|--------|-------------|
+| `add_route(route)` | Register a `Route` instance. Returns `self` (fluent). |
+| `route(pattern, priority=0)` | Decorator factory — registers the decorated function. |
+| `dispatch(request)` | Call the **highest-priority** matching handler. Raises `NoRouteError` if none found and no fallback. |
+| `dispatch_all(request)` | Call **all** matching handlers (sorted by priority). Returns list of results. |
+| `set_fallback(handler)` | Register a catch-all handler. |
+
+### `NoRouteError`
+Raised by `dispatch()` when no route matches and no fallback is configured.
+
+```python
+try:
+    router.dispatch("unknown request")
+except NoRouteError as e:
+    print(e.request)  # "unknown request"
+```
+
+---
+
+## Priority System
+
+Higher priority wins. Use it to resolve conflicts between overlapping routes.
+
+```python
+router.add_route(Route("code", generic_handler, priority=0))
+router.add_route(Route("code", specialist_handler, priority=10))
+
+router.dispatch("write code")  # → specialist_handler wins
+```
+
+---
+
+## License
+
+MIT © Darshankumar Joshi
