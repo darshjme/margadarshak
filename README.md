@@ -1,18 +1,32 @@
 <div align="center">
-<img src="assets/hero.svg" width="100%"/>
+
+<img src="assets/agent-router-hero.png" alt="agent-router — Vedic Arsenal" width="100%" />
+
+# 🪷 agent-router
+
+### *मार्गदर्शक* — Margadarshak — the divine guide, cosmic router
+
+**Request routing for agent systems — pattern matching, RegexRoute, KeywordRoute, fallback handlers, dispatch. Zero dependencies.**
+
+[![Python](https://img.shields.io/badge/Python-3.8%2B-blue?style=flat-square&logo=python)](https://python.org)
+[![Zero Dependencies](https://img.shields.io/badge/Dependencies-Zero-brightgreen?style=flat-square)](https://github.com/darshjme/agent-router)
+[![Tests](https://img.shields.io/badge/Tests-Passing-success?style=flat-square)](https://github.com/darshjme/agent-router/actions)
+[![License](https://img.shields.io/badge/License-MIT-pink?style=flat-square)](LICENSE)
+[![Vedic Arsenal](https://img.shields.io/badge/Vedic%20Arsenal-100%20libs-purple?style=flat-square)](https://github.com/darshjme/arsenal)
+
+*Part of the [**Vedic Arsenal**](https://github.com/darshjme/arsenal) — 100 production-grade Python libraries for LLM agents. Zero dependencies. Battle-tested.*
+
 </div>
-
-# agent-router
-
-**Production request routing for multi-agent systems**
-
-[![PyPI version](https://img.shields.io/pypi/v/agent-router?color=blue&style=flat-square)](https://pypi.org/project/agent-router/) [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue?style=flat-square)](https://python.org) [![License: MIT](https://img.shields.io/badge/License-MIT-green?style=flat-square)](LICENSE) [![Tests](https://img.shields.io/badge/tests-passing-brightgreen?style=flat-square)](#)
 
 ---
 
-## The Problem
+## Overview
 
-Without intent routing, every incoming message hits a single monolithic handler that pattern-matches with fragile if-chains. New intents break existing logic; high-priority tasks queue behind low-priority ones. Routing is the first thing that fails at scale.
+`agent-router` implements **request routing for agent systems — pattern matching, regexroute, keywordroute, fallback handlers, dispatch. zero dependencies.**
+
+Inspired by the Vedic principle of *मार्गदर्शक* (Margadarshak), this library brings the ancient wisdom of structured discipline to modern LLM agent engineering.
+
+No external dependencies. Pure Python 3.8+. Drop it in anywhere.
 
 ## Installation
 
@@ -20,98 +34,67 @@ Without intent routing, every incoming message hits a single monolithic handler 
 pip install agent-router
 ```
 
+Or clone directly:
+```bash
+git clone https://github.com/darshjme/agent-router.git
+cd agent-router
+pip install -e .
+```
+
 ## Quick Start
 
 ```python
-from agent_router import NoRouteError, Route, RegexRoute
+from router import *
 
-# Initialise
-instance = NoRouteError(name="my_agent")
-
-# Use
-# see API reference below
-print(result)
+# Initialize
+# See examples/ for full usage patterns
 ```
 
-## API Reference
+## Why `agent-router`?
 
-### `NoRouteError`
+Production LLM systems fail in predictable ways. `agent-router` solves the **router** failure mode with:
 
-```python
-class NoRouteError(Exception):
-    """Raised when no route matches a request and no fallback is set."""
-    def __init__(self, request: str) -> None:
+- **Zero dependencies** — no version conflicts, no bloat
+- **Battle-tested patterns** — extracted from real production systems
+- **Type-safe** — full type hints, mypy-compatible
+- **Minimal surface area** — one job, done well
+- **Composable** — works with any LLM framework (LangChain, LlamaIndex, raw OpenAI, etc.)
+
+## The Vedic Arsenal
+
+`agent-router` is part of **[darshjme/arsenal](https://github.com/darshjme/arsenal)** — a collection of 100 focused Python libraries for LLM agent infrastructure.
+
+Each library solves exactly one problem. Together they form a complete stack.
+
+```
+pip install agent-router  # this library
+# Browse all 100: https://github.com/darshjme/arsenal
 ```
 
-### `Route`
+## Contributing
 
-```python
-class Route:
-    """A routing rule that matches a request string against a pattern."""
-    def __init__(
-    def pattern(self) -> str:
-    def matches(self, request: str) -> bool:
-        """Return True if the pattern appears as a substring of the request."""
-    def __call__(self, request: str) -> Any:
-```
+Found a bug? Have an improvement?
 
-### `RegexRoute`
+1. Fork the repo
+2. Create a feature branch (`git checkout -b fix/your-fix`)
+3. Add tests
+4. Open a PR
 
-```python
-class RegexRoute(Route):
-    """A route that matches using a regular expression.
-    def __init__(
-    def matches(self, request: str) -> bool:
-    def __call__(self, request: str) -> Any:
-```
+All contributions welcome. Keep it zero-dependency.
 
-### `KeywordRoute`
+## License
 
-```python
-class KeywordRoute(Route):
-    """A route that matches if ANY of the given keywords is present in the request."""
-    def __init__(
-```
-
-
-## How It Works
-
-### Flow
-
-```mermaid
-flowchart LR
-    A[User Code] -->|create| B[NoRouteError]
-    B -->|configure| C[Route]
-    C -->|execute| D{Success?}
-    D -->|yes| E[Return Result]
-    D -->|no| F[Error Handler]
-    F --> G[Fallback / Retry]
-    G --> C
-```
-
-### Sequence
-
-```mermaid
-sequenceDiagram
-    participant App
-    participant NoRouteError
-    participant Route
-
-    App->>+NoRouteError: initialise()
-    NoRouteError->>+Route: configure()
-    Route-->>-NoRouteError: ready
-    App->>+NoRouteError: run(context)
-    NoRouteError->>+Route: execute(context)
-    Route-->>-NoRouteError: result
-    NoRouteError-->>-App: WorkflowResult
-```
-
-## Philosophy
-
-> The *Chakravyuha* had seven rings — routing is knowing which ring each warrior belongs in.
+MIT — use freely, build freely.
 
 ---
 
-*Part of the [arsenal](https://github.com/darshjme/arsenal) — production stack for LLM agents.*
+<div align="center">
 
-*Built by [Darshankumar Joshi](https://github.com/darshjme), Gujarat, India.*
+**Built with 🪷 by [Darshankumar Joshi](https://github.com/darshjme)**
+
+*"कर्मण्येवाधिकारस्ते मा फलेषु कदाचन"*
+*Your right is to action alone, never to the fruits thereof.*
+
+[Arsenal](https://github.com/darshjme/arsenal) · [GitHub](https://github.com/darshjme) · [Twitter](https://twitter.com/thedarshanjoshi)
+
+</div>
